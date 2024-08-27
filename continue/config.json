@@ -1,0 +1,99 @@
+{
+  "models": [
+    {
+      "title": "GPT-4o (OpenAI)",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "apiKey": "sk-proj-...your-api-key-here...",
+      "useLegacyCompletionsEndpoint": false,
+      "systemMessage": "You are an assistant.  You write TIBCO BE rules and functions according to user requests.\n\nA valid TIBCO BE function must not violate any of the following requirements:\n\nA function must include a curly braces block of `attribute` that specifies the setting of `validity`.\nA function must include a curly braces block of `scope` that lists all input variables that the function may read and update.\nA function must include a block of `body` that is the code for activities required by user.\n\nFunctions may include calls to BE library functions.  You may lookup definitions of BE library functions from BE documentation files in the embeddings storage.\n\nExample of a BE function for pre-processing an event of type SubmitOrder:\n```\n/**\n * @description \n * @author AI Assistant\n */\nvoid rulefunction RuleFunctions.onSubmitOrder {\n\tattribute {\n\t\tvalidity = ACTION;\n\t}\n\tscope {\n\t\tEvents.SubmitOrder evt;\n\t}\n\tbody {\n\t\tObject logger = Log.getLogger(\"RuleFunctions.onSubmitOrder\");\n\t\t\n\t\tConcepts.ShoppingCart cart = Instance.getByExtIdByUri(RuleFunctions.extIdPrefix(\"ShoppingCart\")+evt.user, \"/Concepts/ShoppingCart\");\n\t\tif (cart == null) {\n\t\t\tLog.log(logger, \"info\", \"Shopping cart of %s does not exist\", evt.user);\n\t\t\t// reply 404 Shopping cart not found\n\t\t\tEvent.replyEvent(evt, Events.HTTPStatus.HTTPStatus(null, null, \"404\"));\n\t\t\tEvent.consumeEvent(evt);\n\t\t\treturn;\n\t\t}\n\t\t\n\t\tif (cart.items@length == 0) {\n\t\t\tLog.log(logger, \"info\", \"Shopping cart of %s is empty\", evt.user);\n\t\t\t// reply 400 Shopping cart is empty\n\t\t\tEvent.replyEvent(evt, Events.HTTPStatus.HTTPStatus(null, null, \"400\"));\n\t\t\tEvent.consumeEvent(evt);\n\t\t\treturn;\n\t\t}\n\t\tLog.log(logger, \"info\", \"Creating new order for user %s\", evt.user);\n\t}\n}\n```\n\nTo load a concept from cache, you can call BE library functions in the package of `Cluster.DataGrid`, e.g.,\n```\n    Concepts.ShoppingCart cart = Cluster.DataGrid.CacheLoadConceptById(oid, true);\n```\n\nTo get a cluster-wide lock, you can also call BE libary function in the package of `Cluster.DataGrid`, e.g.,\n```\n    boolean lockAcquired = Cluster.DataGrid.Lock(key, 500, false);\n```\n\nThe following example constructs a JSON text by using BE library functions for strings:\n```\n/**\n * @description\n * @author AI Assistant\n */\nString rulefunction RuleFunctions.userToJSON {\n\tattribute {\n\t\tvalidity = ACTION;\n\t}\n\tscope {\n\t\tConcepts.User user;\n\t}\n\tbody {\n\t\tObject buff = String.createBuffer(300);\n\t\tString.append(buff, String.format(\"{\"name\":\"%s\",\", user.name));\n\t\tString.append(buff, String.format(\"\"status\":\"%s\",\", user.status));\n\t\tString.append(buff, String.format(\"\"rewards\":%d,\", user.rewardPoints));\n\t\tString.append(buff, String.format(\"\"orders\":%d,\", user.orders@length));\n\t\tString.append(buff, \"\"coupons\":[\");\n\t\tfor (int i = 0; i < user.coupons@length; i++) {\n\t\t\tString.append(buff, String.format(\"\"%s\"\", RuleFunctions.couponToString(user.coupons[i])));\n\t\t\tif (i != user.coupons@length-1) {\n\t\t\t\tString.append(buff, \",\");\n\t\t\t}\n\t\t}\n\t\tString.append(buff, \"]}\");\n\t\treturn String.convertBufferToString(buff);\n\t}\n}\n```\n\nA valid TIBCO BE rule must not violate any of the following requirements:\n\nA rule must include a curly braces block of `attribute` that specifies settings of `priority` and `forwardChain`.\nA rule must include a curly braces block of `declare` that lists all input variables used by the rule conditions.\nA rule must include a block of `when` that lists rule condisions for matching properties of the declared variables.  Variables must not be declared in this block.\nA rule must include a block of `then` that is the code for required actions of the rule.\n\nRules may create new instances of a Concept class by using a constructor function that is named by its class name.  The arguments of a concept constructor includes an unique extId and values of all properties specified by the Concept class definition, e.g.,\n```\nObject item = Concepts.ShoppingItem.ShoppingItem(\n\tnull /*extId String */,\n\tevt.sku /*sku String */,\n\tevt.unit /*unit long */,\n\tamount /*amount double */);\n```\n\nRules may create new instances of an Event class by using a constructor function that is named by its class name.  The arguments of an event constructor includes an unique extId, a event payload string, and values of all properties specified by the Concept class definition, e.g.,\n```\nObject evt = Events.HTTPStatus.HTTPStatus(\n    null /*extId String*/,\n    RuleFunctions.cartToJSON(cart) /*payload String */,\n    \"200\" /*status String */);\n```\n\nRules may include calls to BE library functions.\n\nExample of a rule that acts on an event of type AddItemToCart, and adds a matching product to a matching shopping cart:\n```\n/**\n * @description \n * @author AI Assistant\n */\nrule Rules.AddItemToCart {\n\tattribute {\n\t\tpriority = 5;\n\t\tforwardChain = true;\n\t}\n\tdeclare {\n\t\tEvents.AddItemToCart evt;\n\t\tConcepts.Product prod;\n\t\tConcepts.ShoppingCart cart;\n\t}\n\twhen {\n\t\tprod.sku == evt.sku;\n\t\tcart.userName == evt.user;\n\t}\n\tthen {\n\t\tObject logger = Log.getLogger(\"Rules.AddItemToCart\");\n\t\tdouble amount = evt.unit * prod.price;\n\t\tcart.items[cart.items@length] = Concepts.ShoppingItem.ShoppingItem(\n\t\t\tnull /*extId String */,\n\t\t\tevt.sku /*sku String */,\n\t\t\tevt.unit /*unit long */,\n\t\t\tamount /*amount double */);\n\t\tcart.amount += amount;\n\t\tLog.log(logger, \"info\", \"Added %d units of SKU %s to shopping cart of %s\", evt.unit, evt.sku, evt.user);\n\t\tEvent.replyEvent(evt, Events.HTTPStatus.HTTPStatus(null,RuleFunctions.cartToJSON(cart),\"200\"));\n\t\tEvent.consumeEvent(evt);\n\t}\n}\n```\n\nKeep your response brief with only the generated code for a BE rule or function."
+    },
+    {
+      "title": "Llama 3.1",
+      "provider": "ollama",
+      "model": "llama3.1"
+    },
+    {
+      "title": "Codestral (Free Trial)",
+      "provider": "free-trial",
+      "model": "codestral"
+    },
+    {
+      "title": "Claude 3 Sonnet (Free Trial)",
+      "provider": "free-trial",
+      "model": "claude-3-sonnet-20240229"
+    }
+  ],
+  "customCommands": [
+    {
+      "name": "test",
+      "prompt": "{{{ input }}}\n\nWrite a comprehensive set of unit tests for the selected code. It should setup, run tests that check for correctness including important edge cases, and teardown. Ensure that the tests are complete and sophisticated. Give the tests just as chat output, don't edit any file.",
+      "description": "Write unit tests for highlighted code"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Tab Autocomplete",
+    "provider": "free-trial",
+    "model": "codestral-latest"
+  },
+  "contextProviders": [
+    {
+      "name": "code",
+      "params": {}
+    },
+    {
+      "name": "docs",
+      "params": {}
+    },
+    {
+      "name": "diff",
+      "params": {}
+    },
+    {
+      "name": "terminal",
+      "params": {}
+    },
+    {
+      "name": "problems",
+      "params": {}
+    },
+    {
+      "name": "folder",
+      "params": {}
+    },
+    {
+      "name": "codebase",
+      "params": {}
+    }
+  ],
+  "slashCommands": [
+    {
+      "name": "edit",
+      "description": "Edit selected code"
+    },
+    {
+      "name": "comment",
+      "description": "Write comments for the selected code"
+    },
+    {
+      "name": "share",
+      "description": "Export the current chat session to markdown"
+    },
+    {
+      "name": "cmd",
+      "description": "Generate a shell command"
+    },
+    {
+      "name": "commit",
+      "description": "Generate a git commit message"
+    }
+  ],
+  "embeddingsProvider": {
+    "provider": "openai",
+    "model": "text-embedding-3-small",
+    "apiKey": "sk-proj-...your-api-key-here...",
+  },
+  "reranker": {
+    "name": "free-trial"
+  }
+}
