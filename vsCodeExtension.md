@@ -343,4 +343,4 @@ However, the auto-completion feature does not appear work as expected even after
     },
 ```
 
-The in-line code generation or auto-completion would always be done using standard programming languages such as Python or Javascript.  It does not take special instructions required by TIBCO BusinssEvents.
+**Note:** The in-line code generation or auto-completion would always be done using standard programming languages such as Python or Javascript.  It does not take special instructions required by TIBCO BusinssEvents.  This problem requires further investigation. To support BE code generation as auto-completion, it may be required to update the implementation of the `Continue` extension, or train AI models for auto-completion, or both.
