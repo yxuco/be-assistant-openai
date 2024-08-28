@@ -43,3 +43,18 @@ pip install notebook
 export OPENAI_API_KEY="sk-proj-...."
 jupyter notebook
 ```
+
+## Artifacts
+
+Documentations of BE library functions are collected in the following JSON documents, which will be used as context for AI models.
+
+* [Standard.json](Standard.json)
+* [RDBMS.json](./RDBMS.json)
+* [CEP.json](./CEP.json)
+
+If fine-tuning is required, the file [tuning-samples.jsonl](./tuning-samples.jsonl) shows the format of fine-tuning data for OpenAI models.
+
+Following docs describe how code assistant can be used to generate rules and functions for TIBCO BusinessEvents.
+
+* [openaiAPI.md](./openaiAPI.md) describes how the Python API of OpenAI is used to generate BE artifacts as implemented in [BEPOC.ipynb](./BEPOC.ipynb).
+* [vsCodeExtension.md](./vsCodeExtension.md) describes how VS Code can use an AI model running either in cloud or locally to generate BE artifacts.
