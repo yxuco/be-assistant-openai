@@ -538,3 +538,15 @@ rule Rules.TestFile {
 	}
 }
 ```
+
+## GPT-4o Fine Tuning
+
+In the previous section, the AI generated BE code correctly includes BE standard library functions that are specified in the embedding vector space.  Can these library functions be learned by the AI model via fine-tuning, instead of document embddings?
+
+We tried the following steps to fine-tune the GPT-4o model:
+
+* Convert BE library function document into GPT training dataset [Standard.jsonl](./Standard.jsonl) by using the code [stdbefunc.ipynb](./stdbefunc.ipynb).
+* Use the training dataset to fine-tune the model `GPT-4o` as shown in [gpt-4o fine-tuning.png](./gpt-4o%20fine-tuning.png).
+* Compare the performance of the fine-tuned model with the previous approach of embedding, as coded in [FineTunedModel.ipynb](./FineTunedModel.ipynb).
+
+The result is not promising.  The fine-tuned model cannot find correct BE library functions as expected.  The failed fine-tuning could be due to the format of the training dataset, or it is not a suitable use-case for fine-tuning to learn about function defintions.
