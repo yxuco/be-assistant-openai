@@ -67,6 +67,14 @@
       "params": {}
     }
   ],
+  "experimental": {
+    "defaultContext": [
+      {
+        "name": "folder",
+        "query": "libs"
+      }
+    ]
+  },
   "slashCommands": [
     {
       "name": "edit",

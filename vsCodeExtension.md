@@ -100,6 +100,21 @@ void rulefunction RuleFunctions.onOrderStatus {
 }
 ```
 
+Note that we had to specify a context file `@Standard.json` for the AI assistant to lookup BE library functions.  `Continue` will support a setting to specify a default context folder as shown in [~/.continue/config.json](./continue/config.json):
+
+```
+  "experimental": {
+    "defaultContext": [
+      {
+        "name": "folder",
+        "query": "libs"
+      }
+    ]
+  },
+```
+
+and so all files in the `lib` folder will be automatically added as context files.  By using this configuration, we would not have to specify a context on every chat request.
+
 ### BE Rule Sending HTTP Response
 
 Request prompt:
@@ -328,9 +343,9 @@ The most useful code assistant feature is auto-completion.  By default, the `Con
   },
 ```
 
-It prompts code suggestions as you type in VS Code editor, which you can `TAB` to accept.  You may also type `command-I` to enter special request for in-line code generation or updates.
+It prompts code suggestions as you type in VS Code editor, which you can `TAB` to accept.  You may also type `command-I` to enter special request for in-line code generation or updates, but note that `command-I` will invoke the chat model, not the model for auto-complete.
 
-However, the auto-completion feature does not appear work as expected even after the configuration is updated to use `GPT-4o`, i.e.,
+However, unlike the chat models, the auto-completion model does not accept customized system-messages.  For example, if you configure it to use `GPT-4o` as follows
 
 ```json
   "tabAutocompleteModel": {
@@ -343,4 +358,59 @@ However, the auto-completion feature does not appear work as expected even after
     },
 ```
 
-**Note:** The in-line code generation or auto-completion would always be done using standard programming languages such as Python or Javascript.  It does not take special instructions required by TIBCO BusinssEvents.  This problem requires further investigation. To support BE code generation as auto-completion, it may be required to update the implementation of the `Continue` extension, or train AI models for auto-completion, or both.
+the specified `systemMessage` will be ignored.
+
+Such lack of mechanism to customize the behavior of auto-completion makes AI assistants not useful for TIBCO BusinessEvents developers.  Neither `Continue` nor `GitHub Copilot` provide easy customizations for auto-completion.  To support auto-completion for TIBCO BusinessEvents, we would have to investigate LLM model fine-tuning or implement our own agent to support customization using techniques such as RAG (Retrieval-Augmented Generation).
+
+Note that [GitHub Copilot](https://code.visualstudio.com/docs/copilot/overview) can use open files as additional context for code templates.  You may open a well-implemented BE rule-function or rule, and set `GitHub Copilot` to `Enable Completions for 'plaintext'`, and then you'll see code suggestions based on the open files while you edit new BE code.  This looks nice, but at present you cannot add all files of a workspace as contexts for auto-completion, nor can you add external code repositories as auto-completion contexts.
+
+## Codeium Support for Auto-completion
+
+[Codeium](https://codeium.com/) is an AI assistant that supports extended contexts that `GitHub Copilot` does not support.  By default, `Codeium` uses all files in the workspace as context for auto-complete.  It claims that you can also add more external code repositories as context for all end-users.
+
+For example, you can open the BE RMS project (BRMS) from a standard BE installation in VS code, and write the following `rulefunction` by typing only the comment lines.  `Codeium` extension can identify correct BE library functions that are suitable for the specified tasks.  However, `Codeium` may suggest wrong hallucinated function calls as well, and thus developer must have knowledge to pick a correct code from multiple suggestions.  More work must be done to reduce and downgrade hallucinated suggestions.
+
+```
+String rulefunction RuleFunctions.test {
+    attribute {
+        validity = ACTION;
+    }
+    scope {
+        String s;
+    }
+    body {
+        // create logger
+        Object LOGGER = Log.getLogger("RuleFunctions.test");
+
+        // create string buffer and append s to it then get the string content of the buffer
+        Object buffer = String.createBuffer(0);
+        String.append(buffer, s);
+        String s2 = String.convertBufferToString(buffer);
+
+        // log the string content of the buffer
+        Log.log(LOGGER, "Debug", "s2 = %s", s2);
+
+        // acquire clusterwide lock on s and log failure
+        boolean lock = Cluster.DataGrid.Lock(s, -1, false);
+        if (!lock) {
+            Log.log(LOGGER, "Debug", "Lock on %s failed", s);
+        }
+
+        // load concept of project artifact by extId and Uri from cache
+        Object projectArtifact = Cluster.DataGrid.CacheLoadConceptByExtIdByUri("projectArtifact", true, "/WebStudio/Core/Concepts/Lifecycle/WS_C_ProjectArtifact");
+        if (projectArtifact == null) {
+            Log.log(LOGGER, "Debug", "Project artifact not found");
+        }
+
+        // load master artifact by extId and Uri from cache
+        Object masterArtifact = Cluster.DataGrid.CacheLoadConceptByExtIdByUri("masterArtifact", true, "/WebStudio/Core/Concepts/Lifecycle/WS_C_MasterArtifact");
+        if (masterArtifact == null) {
+            Log.log(LOGGER, "Debug", "Master artifact not found");
+        }
+
+        // clear the buffer
+        String.clearBuffer(buffer);
+        return s2;
+    }
+}
+```
