@@ -2,7 +2,9 @@
 
 When you develop software using [VS Code](https://code.visualstudio.com/) or a [JetBrains](https://www.jetbrains.com/) IDE.  AI models can present as a pair programmer to help you write code faster and smarter.  The [GitHub Copilot](https://code.visualstudio.com/docs/copilot/overview) extension is the most popular of such tools.
 
-A more flexible and configurable tool is, however, the [Continue](https://docs.continue.dev/intro) extension, which is an open-source AI code assistant, and it can be configured to use different types of LLMs, including OpenAI, Gemini, Llama, Mistral, and more.  The LLMs can run in cloud by service providers, or locally on your workstation, although when it runs locally on a MacBook Pro, it would better be equipped with newer M series chips.
+GitHub copilot implements a `@workspace` participant that can use all files in the current workspace as context for generating BE code via its chat interface.  If the workspace contains good samples of BE artifacts, you can ask it to generate reasonably correct rules and rule-functions, as well as other BE artifacts.  It, however, cannot use artifacts from external code repositories.  To use external code repository as context, you may need to implement a [Copilot Extension](https://docs.github.com/en/copilot/building-copilot-extensions/about-building-copilot-extensions) that can fetch code from external repositories.
+
+A more flexible and configurable tool is the [Continue](https://docs.continue.dev/intro) extension, which is an open-source AI code assistant, and it can be configured to use different types of LLMs, including OpenAI, Gemini, Llama, Mistral, and more.  The LLMs can run in cloud by service providers, or locally on your workstation, although when it runs locally on a MacBook Pro, it would better be equipped with newer M series chips.
 
 ## Setup Continue Extension
 
